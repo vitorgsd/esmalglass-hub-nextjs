@@ -69,7 +69,7 @@ export function ClientWorkChart() {
                   borderRadius: '8px',
                   boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
                 }}
-                formatter={(value: any) => [`${value} trabalhos`, 'Total']}
+                formatter={(value: number) => [`${value} trabalhos`, 'Total']}
                 labelStyle={{ color: '#1e293b' }}
               />
               <Bar 
