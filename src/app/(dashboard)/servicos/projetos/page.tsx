@@ -1,8 +1,28 @@
 // src/app/(dashboard)/servicos/projetos/page.tsx
-"use client"; // Necessário para usar hooks como useState
+"use client";
 
-import * as React from "react";
-import { MoreHorizontal, PlusCircle } from "lucide-react";
+import { useState } from "react";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import {
+  Plus,
+  Search,
+  Filter,
+  MoreHorizontal,
+  Edit,
+  Trash2,
+  ChevronRight,
+  User,
+} from "lucide-react";
+
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Table,
   TableBody,
@@ -11,159 +31,435 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Progress } from "@/components/ui/progress";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription
+  DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
-// Dados Falsos (Mock Data) para preencher a tabela, como solicitado
-const mockProjects = [
+// Schema de validação
+const projetoSchema = z.object({
+  nome: z.string().min(1, "Nome é obrigatório"),
+  prazo: z.string().min(1, "Prazo é obrigatório"),
+  responsavel: z.string().min(1, "Responsável é obrigatório"),
+  projetoPai: z.string().optional(),
+});
+
+type ProjetoFormData = z.infer<typeof projetoSchema>;
+
+// Tipos
+interface Responsavel {
+  id: string;
+  nome: string;
+  avatar?: string;
+  iniciais: string;
+}
+
+interface Projeto {
+  id: string;
+  nome: string;
+  responsaveis: Responsavel[];
+  prazo: Date;
+  status: "Em Andamento" | "Pendente" | "Concluído" | "Com Impedimento";
+  progresso: number;
+  projetoPai?: string;
+  nivel: number;
+}
+
+// Mock Data
+const responsaveisMock: Responsavel[] = [
+  { id: "1", nome: "Ana Silva", iniciais: "AS" },
+  { id: "2", nome: "João Santos", iniciais: "JS" },
+  { id: "3", nome: "Maria Costa", iniciais: "MC" },
+  { id: "4", nome: "Pedro Lima", iniciais: "PL" },
+  { id: "5", nome: "Carla Oliveira", iniciais: "CO" },
+];
+
+const projetosMock: Projeto[] = [
   {
-    id: "PROJ-001",
-    name: "Desenvolvimento Nova Coleção 2026",
-    assignees: [{ name: "Vitor Dente", avatar: "https://github.com/vitorgsd.png" }],
-    deadline: "30/10/2025",
+    id: "1",
+    nome: "Desenvolvimento de Nova Linha Cerâmica Premium",
+    responsaveis: [responsaveisMock[0], responsaveisMock[1]],
+    prazo: new Date("2024-12-15"),
     status: "Em Andamento",
-    progress: 75,
-    parentId: null,
+    progresso: 65,
+    nivel: 0,
   },
   {
-    id: "PROJ-002",
-    name: "Aprovação de Amostras - Revestir 2026",
-    assignees: [{ name: "Vitor Dente", avatar: "https://github.com/vitorgsd.png" }],
-    deadline: "15/11/2025",
-    status: "Em Andamento",
-    progress: 40,
-    parentId: "PROJ-001", // Este é um sub-projeto
-  },
-  {
-    id: "PROJ-003",
-    name: "Criação de Imagens para Catálogo",
-    assignees: [{ name: "Designer A" }, { name: "Designer B" }],
-    deadline: "20/12/2025",
-    status: "Pendente",
-    progress: 0,
-    parentId: "PROJ-001", // Este é outro sub-projeto
-  },
-  {
-    id: "PROJ-004",
-    name: "Setup de Máquina - Cliente XYZ",
-    assignees: [{ name: "Técnico 1" }],
-    deadline: "25/09/2025",
+    id: "2",
+    nome: "Pesquisa de Materiais",
+    responsaveis: [responsaveisMock[2]],
+    prazo: new Date("2024-11-30"),
     status: "Concluído",
-    progress: 100,
-    parentId: null,
+    progresso: 100,
+    projetoPai: "1",
+    nivel: 1,
   },
   {
-    id: "PROJ-005",
-    name: "Análise de Concorrência - Efeitos Digitais",
-    assignees: [{ name: "Vitor Dente", avatar: "https://github.com/vitorgsd.png" }],
-    deadline: "10/10/2025",
+    id: "3",
+    nome: "Desenvolvimento de Protótipos",
+    responsaveis: [responsaveisMock[1], responsaveisMock[3]],
+    prazo: new Date("2024-12-10"),
+    status: "Em Andamento",
+    progresso: 45,
+    projetoPai: "1",
+    nivel: 1,
+  },
+  {
+    id: "4",
+    nome: "Campanha de Marketing Digital",
+    responsaveis: [responsaveisMock[4]],
+    prazo: new Date("2024-11-25"),
+    status: "Pendente",
+    progresso: 15,
+    nivel: 0,
+  },
+  {
+    id: "5",
+    nome: "Otimização de Processos de Produção",
+    responsaveis: [responsaveisMock[0], responsaveisMock[3]],
+    prazo: new Date("2024-10-30"),
     status: "Com Impedimento",
-    progress: 20,
-    parentId: null,
+    progresso: 30,
+    nivel: 0,
+  },
+  {
+    id: "6",
+    nome: "Análise de Qualidade",
+    responsaveis: [responsaveisMock[2]],
+    prazo: new Date("2024-11-15"),
+    status: "Em Andamento",
+    progresso: 80,
+    nivel: 0,
   },
 ];
 
-// Função para definir a cor do Badge com base no status
-const getStatusVariant = (status: string) => {
-  switch (status) {
-    case "Em Andamento":
-      return "default"; // Azul padrão
-    case "Concluído":
-      return "success"; // Verde (adicione esta variante no seu Badge se não existir)
-    case "Pendente":
-      return "secondary"; // Cinza
-    case "Com Impedimento":
-      return "destructive"; // Vermelho
-    default:
-      return "outline";
-  }
-};
-
 export default function ProjetosProducaoPage() {
-  const [isModalOpen, setIsModalOpen] = React.useState(false);
+  const [projetos, setProjetos] = useState<Projeto[]>(projetosMock);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("todos");
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+  const form = useForm<ProjetoFormData>({
+    resolver: zodResolver(projetoSchema),
+    defaultValues: {
+      nome: "",
+      prazo: "",
+      responsavel: "",
+      projetoPai: "",
+    },
+  });
+
+  // Função para obter cor do status
+  const getStatusColor = (status: Projeto["status"]) => {
+    switch (status) {
+      case "Em Andamento":
+        return "default";
+      case "Pendente":
+        return "secondary";
+      case "Concluído":
+        return "outline";
+      case "Com Impedimento":
+        return "destructive";
+      default:
+        return "secondary";
+    }
+  };
+
+  // Filtrar projetos
+  const projetosFiltrados = projetos.filter((projeto) => {
+    const matchesSearch = projeto.nome
+      .toLowerCase()
+      .includes(searchTerm.toLowerCase());
+    const matchesStatus =
+      statusFilter === "todos" || projeto.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
+
+  // Função para adicionar projeto
+  const onSubmit = (data: ProjetoFormData) => {
+    const responsavel = responsaveisMock.find((r) => r.id === data.responsavel);
+    if (!responsavel) return;
+
+    const novoProjeto: Projeto = {
+      id: Date.now().toString(),
+      nome: data.nome,
+      responsaveis: [responsavel],
+      prazo: new Date(data.prazo),
+      status: "Pendente",
+      progresso: 0,
+      projetoPai: data.projetoPai || undefined,
+      nivel: data.projetoPai ? 1 : 0,
+    };
+
+    setProjetos([...projetos, novoProjeto]);
+    form.reset();
+    setIsDialogOpen(false);
+  };
+
+  // Função para excluir projeto
+  const excluirProjeto = (id: string) => {
+    setProjetos(projetos.filter((p) => p.id !== id));
+  };
+
+  // Obter projetos principais para o select
+  const projetosPrincipais = projetos.filter((p) => p.nivel === 0);
 
   return (
-    <div className="flex flex-col gap-6">
-      {/* Cabeçalho da Página */}
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-semibold text-gray-900">
+    <div className="max-w-7xl mx-auto">
+      {/* Welcome Section - IGUAL AO DASHBOARD */}
+      <div className="mb-8 mt-8">
+        <h2 className="text-2xl font-semibold text-gray-900 mb-2">
           Projetos e Produção (Design)
         </h2>
-        <div className="flex items-center gap-2">
-          {/* Adicione componentes de filtro aqui se desejar */}
-          <Button onClick={() => setIsModalOpen(true)}>
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Adicionar Projeto
-          </Button>
-        </div>
+        <p className="text-gray-600">
+          Gerencie e acompanhe o progresso de todos os projetos de design cerâmico e produção
+        </p>
       </div>
 
-      {/* Tabela de Projetos */}
-      <div className="border rounded-lg">
+      {/* Actions Bar */}
+      <div className="flex items-center gap-4 p-4 bg-white rounded-lg border mb-6">
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogTrigger asChild>
+            <Button className="gap-2">
+              <Plus className="w-4 h-4" />
+              Adicionar Projeto
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Novo Projeto</DialogTitle>
+            </DialogHeader>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="nome"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nome do Projeto</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Digite o nome do projeto" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="prazo"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Prazo</FormLabel>
+                      <FormControl>
+                        <Input type="date" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="responsavel"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Responsável</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione um responsável" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {responsaveisMock.map((responsavel) => (
+                            <SelectItem key={responsavel.id} value={responsavel.id}>
+                              {responsavel.nome}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="projetoPai"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Projeto Pai (Opcional)</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione um projeto pai" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="">Nenhum (Projeto Principal)</SelectItem>
+                          {projetosPrincipais.map((projeto) => (
+                            <SelectItem key={projeto.id} value={projeto.id}>
+                              {projeto.nome}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <div className="flex justify-end gap-2 pt-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setIsDialogOpen(false)}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button type="submit">Criar Projeto</Button>
+                </div>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
+
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <Input
+            placeholder="Buscar projetos..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" className="gap-2">
+              <Filter className="w-4 h-4" />
+              Status: {statusFilter === "todos" ? "Todos" : statusFilter}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent>
+            <DropdownMenuItem onClick={() => setStatusFilter("todos")}>
+              Todos
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setStatusFilter("Em Andamento")}>
+              Em Andamento
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setStatusFilter("Pendente")}>
+              Pendente
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setStatusFilter("Concluído")}>
+              Concluído
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setStatusFilter("Com Impedimento")}>
+              Com Impedimento
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
+      {/* Projects Table */}
+      <div className="bg-white rounded-lg border">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[350px]">Nome do Projeto</TableHead>
+              <TableHead>Nome do Projeto</TableHead>
               <TableHead>Responsáveis</TableHead>
               <TableHead>Prazo</TableHead>
-              <TableHead>Progresso</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead className="w-[64px]"></TableHead>
+              <TableHead>Progresso</TableHead>
+              <TableHead className="w-[50px]">Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {mockProjects.map((project) => (
-              <TableRow key={project.id}>
-                <TableCell className={`font-medium ${project.parentId ? 'pl-10' : ''}`}>
-                  {project.parentId && <span className="mr-2">↳</span>}
-                  {project.name}
+            {projetosFiltrados.map((projeto) => (
+              <TableRow key={projeto.id}>
+                <TableCell>
+                  <div
+                    className="flex items-center gap-2"
+                    style={{ paddingLeft: `${projeto.nivel * 24}px` }}
+                  >
+                    {projeto.nivel > 0 && (
+                      <ChevronRight className="w-4 h-4 text-gray-400" />
+                    )}
+                    <span className="font-medium">{projeto.nome}</span>
+                  </div>
                 </TableCell>
                 <TableCell>
-                  <div className="flex items-center -space-x-2">
-                    {project.assignees.map((assignee) => (
-                      <Avatar key={assignee.name} className="h-6 w-6 border-2 border-white">
-                        <AvatarImage src={assignee.avatar} />
-                        <AvatarFallback>{assignee.name.charAt(0)}</AvatarFallback>
+                  <div className="flex -space-x-2">
+                    {projeto.responsaveis.map((responsavel) => (
+                      <Avatar key={responsavel.id} className="w-8 h-8 border-2 border-white">
+                        <AvatarImage src={responsavel.avatar} />
+                        <AvatarFallback className="text-xs">
+                          {responsavel.iniciais}
+                        </AvatarFallback>
                       </Avatar>
                     ))}
                   </div>
                 </TableCell>
-                <TableCell>{project.deadline}</TableCell>
                 <TableCell>
-                  <div className="flex items-center gap-2">
-                    <Progress value={project.progress} className="w-[100px]" />
-                    <span className="text-xs text-muted-foreground">{project.progress}%</span>
-                  </div>
+                  {format(projeto.prazo, "dd/MM/yyyy", { locale: ptBR })}
                 </TableCell>
                 <TableCell>
-                  <Badge variant={getStatusVariant(project.status)}>{project.status}</Badge>
+                  <Badge variant={getStatusColor(projeto.status)}>
+                    {projeto.status}
+                  </Badge>
+                </TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-2">
+                    <Progress value={projeto.progresso} className="w-20" />
+                    <span className="text-sm text-gray-600 min-w-[35px]">
+                      {projeto.progresso}%
+                    </span>
+                  </div>
                 </TableCell>
                 <TableCell>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" className="h-8 w-8 p-0">
-                        <span className="sr-only">Abrir menu</span>
-                        <MoreHorizontal className="h-4 w-4" />
+                      <Button variant="ghost" size="sm">
+                        <MoreHorizontal className="w-4 h-4" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem>Editar Projeto</DropdownMenuItem>
-                      <DropdownMenuItem>Excluir Projeto</DropdownMenuItem>
+                      <DropdownMenuItem>
+                        <Edit className="w-4 h-4 mr-2" />
+                        Editar Projeto
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => excluirProjeto(projeto.id)}
+                        className="text-red-600"
+                      >
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Excluir Projeto
+                      </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </TableCell>
@@ -172,22 +468,6 @@ export default function ProjetosProducaoPage() {
           </TableBody>
         </Table>
       </div>
-      
-      {/* Modal (Dialog) para Adicionar Novo Projeto */}
-      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Adicionar Novo Projeto</DialogTitle>
-            <DialogDescription>
-              Preencha as informações abaixo para criar um novo projeto.
-            </DialogDescription>
-          </DialogHeader>
-          {/* O formulário (react-hook-form) entrará aqui */}
-          <div className="py-4">
-             <p>Formulário de cadastro aqui...</p>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

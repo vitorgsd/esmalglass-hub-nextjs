@@ -16,7 +16,7 @@ export function DashboardHeader() {
           alt="Esmalglass Logo" 
           width={28}
           height={28}
-          className="h-7 w-auto object-contain"
+          className="h-6 w-auto object-contain"
         />
       
       <div className="flex items-center gap-3">
