@@ -1,10 +1,10 @@
-import { DashboardHeader } from "@/components/DashboardHeader";
-import { DashboardSidebar } from "@/components/DashboardSidebar";
-import { KPICards } from "@/components/KPICards";
-import { PerformanceChart } from "@/components/PerformanceChart";
-import { NotificationsFeed } from "@/components/NotificationsFeed";
-import { ProjectsToDeliver } from "@/components/ProjectsToDeliver";
-import { ClientWorkChart } from "@/components/ClientWorkChart";
+import { DashboardHeader } from "@/components/layout/DashboardHeader";
+import { DashboardSidebar } from "@/components/layout/DashboardSidebar";
+import { KPICards } from "@/components/dashboard-widgets/KPICards";
+import { PerformanceChart } from "@/components/dashboard-widgets/PerformanceChart";
+import { NotificationsFeed } from "@/components/dashboard-widgets/NotificationsFeed";
+import { ProjectsToDeliver } from "@/components/dashboard-widgets/ProjectsToDeliver";
+import { ClientWorkChart } from "@/components/dashboard-widgets/ClientWorkChart";
 
 export default function Dashboard() {
   return (

@@ -1,4 +1,5 @@
-import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
+import Image from "next/image";
 
 export function DashboardHeader() {
   return (
@@ -10,9 +11,11 @@ export function DashboardHeader() {
       </div>
 
       {/* Logo */}
-        <img 
+        <Image 
           src="/logo-esmalglass.svg" 
           alt="Esmalglass Logo" 
+          width={28}
+          height={28}
           className="h-7 w-auto object-contain"
         />
       

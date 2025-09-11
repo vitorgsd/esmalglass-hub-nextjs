@@ -6,7 +6,7 @@ import {
   Briefcase, 
   Settings 
 } from "lucide-react";
-import { Button } from "./ui/button";
+import { Button } from "../ui/button";
 
 const navigationItems = [
   {
@@ -14,11 +14,7 @@ const navigationItems = [
     icon: Home,
     active: true
   },
-  {
-    title: "Gestão de Projetos",
-    icon: FolderKanban,
-    active: false
-  },
+  
   {
     title: "CRM - Clientes",
     icon: Users,

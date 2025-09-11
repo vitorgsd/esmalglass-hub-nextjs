@@ -1,5 +1,5 @@
 "use client"
-import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { TrendingUp, Target, Users, CheckCircle } from "lucide-react";
 
 const kpiData = [
